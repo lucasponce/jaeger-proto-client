@@ -1,15 +1,19 @@
 package main
 
 import (
-	"github.com/golang/glog"
-	"google.golang.org/grpc"
-	"github.com/lucasponce/jaeger-proto-client/model"
-	"time"
 	"context"
+	"flag"
 	"io"
+	"time"
+
+	"github.com/golang/glog"
+	"github.com/lucasponce/jaeger-proto-client/model"
+	"google.golang.org/grpc"
 )
 
 func main() {
+	flag.Set("logtostderr", "true")
+	flag.Parse()
 
 	jaegerAddress := "localhost:16685"
 
