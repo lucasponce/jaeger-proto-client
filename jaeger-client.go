@@ -32,18 +32,15 @@ func main() {
 	defer cancel()
 
 	sTraceId := "2400171a1ac3b1cffde1fd36fd401ad0"
-	glog.Infof("%v", sTraceId)
 	traceId, err := model.TraceIDFromString(sTraceId)
 	if err != nil {
 		glog.Errorf("[%s] failed to parse TraceId: %v", sTraceId, err)
 	}
-	glog.Infof("%v", traceId)
 	bTraceId := make([]byte, 16)
-	n, err := traceId.MarshalTo(bTraceId)
+	_, err = traceId.MarshalTo(bTraceId)
 	if err != nil {
 		glog.Errorf("[%s] failed to marshall TraceId: %v", sTraceId, err)
 	}
-	glog.Infof("[%d] %v", n, bTraceId)
 	stream, err := grpcClient.GetTrace(ctx, &model.GetTraceRequest{
 		TraceId: bTraceId,
 	})
@@ -57,7 +54,16 @@ func main() {
 			break
 		}
 		for i := range received.Spans {
-			glog.Infof("[%s]", received.Spans[i].String())
+			span := received.Spans[i]
+			traceId := model.TraceID{}
+			traceId.Unmarshal(span.TraceId)
+			spanId, err := model.SpanIDFromBytes(span.SpanId)
+			if err != nil {
+				glog.Errorf("[%s] failed to process spanId: %v", jaegerAddress, err)
+				break
+			}
+			glog.Infof("TraceId: [%s]", traceId)
+			glog.Infof("SpanId: [%s]", spanId)
 		}
 
 	}
