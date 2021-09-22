@@ -9,6 +9,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/lucasponce/jaeger-proto-client/model"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func main() {
@@ -41,11 +42,15 @@ func main() {
 	if err != nil {
 		glog.Errorf("[%s] failed to marshall TraceId: %v", sTraceId, err)
 	}
+
+	// GetTrace scenario
+
+	glog.Infof("GetTrace [%s]", sTraceId)
 	stream, err := grpcClient.GetTrace(ctx, &model.GetTraceRequest{
 		TraceId: bTraceId,
 	})
 	if err != nil {
-		glog.Errorf("[%s] failed to FindTraces: %v", jaegerAddress, err)
+		glog.Errorf("[%s] failed to GetTrace: %v", jaegerAddress, err)
 	}
 
 	for received, err := stream.Recv(); err != io.EOF; received, err = stream.Recv() {
@@ -62,9 +67,43 @@ func main() {
 				glog.Errorf("[%s] failed to process spanId: %v", jaegerAddress, err)
 				break
 			}
-			glog.Infof("TraceId: [%s]", traceId)
-			glog.Infof("SpanId: [%s]", spanId)
+			glog.Infof("TraceId: [%s] SpanId: [%s]", traceId, spanId)
 		}
+	}
 
+	// FindTraces scenarios
+	glog.Infof("FindTraces")
+
+	gNow := time.Now()
+	gThen := gNow.Add(-30*time.Minute)
+	now := timestamppb.New(gNow)
+	then := timestamppb.New(gThen)
+
+	stream, err = grpcClient.FindTraces(ctx, &model.FindTracesRequest{
+		Query: &model.TraceQueryParameters{
+			ServiceName: "cars.travel-agency",
+			StartTimeMin: then,
+			StartTimeMax: now,
+		},
+	})
+	if err != nil {
+		glog.Errorf("[%s] failed to FindTraces: %v", jaegerAddress, err)
+	}
+	for received, err := stream.Recv(); err != io.EOF; received, err = stream.Recv() {
+		if err != nil {
+			glog.Errorf("[%s] failed to process trace: %v", jaegerAddress, err)
+			break
+		}
+		for i := range received.Spans {
+			span := received.Spans[i]
+			traceId := model.TraceID{}
+			traceId.Unmarshal(span.TraceId)
+			spanId, err := model.SpanIDFromBytes(span.SpanId)
+			if err != nil {
+				glog.Errorf("[%s] failed to process spanId: %v", jaegerAddress, err)
+				break
+			}
+			glog.Infof("TraceId: [%s] SpanId: [%s]", traceId, spanId)
+		}
 	}
 }
