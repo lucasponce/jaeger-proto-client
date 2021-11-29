@@ -1,0 +1,9 @@
+external_services:
+  tracing:
+    enabled: true
+    use_grpc: true
+    in_cluster_url: http://localhost:16685/jaeger
+    url: http://localhost:16685/jaeger
+    namespace: istio-system
+    port: 443
+    service: jaeger-query
